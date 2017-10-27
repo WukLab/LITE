@@ -1,0 +1,128 @@
+diff -uNr linux-3.11.1/arch/x86/syscalls/syscall_64.tbl lite-kernel/arch/x86/syscalls/syscall_64.tbl
+--- linux-3.11.1/arch/x86/syscalls/syscall_64.tbl	2017-10-24 17:27:28.402482943 -0400
++++ lite-kernel/arch/x86/syscalls/syscall_64.tbl	2017-10-24 17:28:23.245636614 -0400
+@@ -321,6 +321,38 @@
+ 312	common	kcmp			sys_kcmp
+ 313	common	finit_module		sys_finit_module
+ 
++319	common	lite_remote_memset	sys_lite_remote_memset 
++320	common	lite_fetch_add		sys_lite_fetch_add 
++321	common	lite_rdma_synwrite	sys_lite_rdma_synwrite
++322	common	lite_rdma_read		sys_lite_rdma_read 
++323	common	lite_ask_lmr		sys_lite_ask_lmr 
++
++
++326	common	lite_rdma_asywrite	sys_lite_rdma_asywrite
++327	common	lite_dist_barrier	sys_lite_dist_barrier
++328	common	lite_add_ask_mr_table	sys_lite_add_ask_mr_table
++329	common	lite_compare_swp	sys_lite_compare_swp
++
++330	common	lite_alloc_remote	sys_lite_alloc_remote 
++331	common	lite_umap_lmr		sys_lite_umap_lmr
++
++332	common	lite_register_application		sys_lite_register_application
++333	common	lite_unregister_application		sys_lite_unregister_application
++334	common	lite_receive_message	        	sys_lite_receive_message
++335	common	lite_send_reply_imm	        	sys_lite_send_reply_imm
++336	common	lite_reply_message	        	sys_lite_reply_message
++337	common	lite_get_node_id			sys_lite_get_node_id
++338	common	lite_query_port	                	sys_lite_query_port
++339	common	lite_alloc_continuous_memory    	sys_lite_alloc_continuous_memory
++340	common	lite_wrap_alloc_for_remote_access	sys_lite_wrap_alloc_for_remote_access
++341	common	lite_create_lock	        	sys_lite_create_lock
++342	common	lite_ask_lock		                sys_lite_ask_lock
++343	common	lite_lock               		sys_lite_lock
++344	common	lite_unlock		                sys_lite_unlock
++345	common	lite_get_total_node	                sys_lite_get_total_node
++346     common  lite_reply_and_receive_message          sys_lite_reply_and_receive_message
++347     common  lite_join                               sys_lite_join
++
+ #
+ # x32-specific system call numbers start at 512 to avoid cache impact
+ # for native 64-bit operation.
+diff -uNr linux-3.11.1/include/linux/syscalls.h lite-kernel/include/linux/syscalls.h
+--- linux-3.11.1/include/linux/syscalls.h	2017-10-24 17:27:28.612483534 -0400
++++ lite-kernel/include/linux/syscalls.h	2017-10-24 17:28:38.863682487 -0400
+@@ -846,4 +846,43 @@
+ asmlinkage long sys_kcmp(pid_t pid1, pid_t pid2, int type,
+ 			 unsigned long idx1, unsigned long idx2);
+ asmlinkage long sys_finit_module(int fd, const char __user *uargs, int flags);
++
++
++/* Fit design */
++
++asmlinkage long sys_lite_remote_memset(unsigned long, int, int);
++asmlinkage long sys_lite_fetch_add(unsigned long, void __user *,
++				  unsigned long long, unsigned int);
++asmlinkage long sys_lite_rdma_synwrite(unsigned long, void __user*,
++				      unsigned int,  unsigned int, unsigned int, int);
++asmlinkage long sys_lite_rdma_asywrite(unsigned long, void __user*,
++				      unsigned int,  unsigned int, unsigned int);
++asmlinkage long sys_lite_rdma_read(unsigned long, void __user*,
++				  unsigned int,  unsigned int, unsigned int, int);
++asmlinkage long sys_lite_ask_lmr(int, uint64_t, uint64_t, int);
++
++asmlinkage long sys_lite_dist_barrier(unsigned int);
++
++asmlinkage long sys_lite_add_ask_mr_table(uint64_t, uint64_t, uint64_t, int);
++asmlinkage long sys_lite_compare_swp(unsigned long, void*, unsigned long long, unsigned long long, unsigned int);
++asmlinkage long sys_lite_alloc_remote(unsigned int, unsigned int, unsigned int, int);
++asmlinkage long sys_lite_umap_lmr(unsigned long);
++
++asmlinkage long sys_lite_register_application(unsigned int, unsigned int, unsigned int, void*, unsigned int);
++asmlinkage long sys_lite_unregister_application(unsigned int);
++asmlinkage long sys_lite_receive_message(int, void*, void *, void*, int, unsigned int);
++asmlinkage long sys_lite_send_reply_imm(int, int, void*, void*, void*, unsigned int);
++asmlinkage long sys_lite_reply_message(void*, int, unsigned long, unsigned int);
++asmlinkage long sys_lite_get_node_id(void);
++asmlinkage long sys_lite_get_total_node(void);
++asmlinkage long sys_lite_query_port(int, int, int);
++asmlinkage long sys_lite_alloc_continuous_memory(unsigned long long, unsigned long);
++asmlinkage long sys_lite_wrap_alloc_for_remote_access(void*, unsigned int, uint64_t, int);
++asmlinkage long sys_lite_create_lock(int, void*);
++asmlinkage long sys_lite_ask_lock(int, int, void*);
++asmlinkage long sys_lite_lock(void*);
++asmlinkage long sys_lite_unlock(void*);
++asmlinkage long sys_lite_reply_and_receive_message(void *, int, unsigned long, void *, int, void *);
++asmlinkage long sys_lite_join(void *, int, int);
++
+ #endif
+diff -uNr linux-3.11.1/Makefile lite-kernel/Makefile
+--- linux-3.11.1/Makefile	2017-10-24 17:27:28.013481847 -0400
++++ lite-kernel/Makefile	2017-10-24 17:27:56.429561876 -0400
+@@ -733,7 +733,7 @@
+ 
+ 
+ ifeq ($(KBUILD_EXTMOD),)
+-core-y		+= kernel/ mm/ fs/ ipc/ security/ crypto/ block/
++core-y		+= kernel/ mm/ fs/ ipc/ security/ crypto/ block/ ../lite-syscall/
+ 
+ vmlinux-dirs	:= $(patsubst %/,%,$(filter %/, $(init-y) $(init-m) \
+ 		     $(core-y) $(core-m) $(drivers-y) $(drivers-m) \
+diff -uNr linux-3.11.1/mm/memory.c lite-kernel/mm/memory.c
+--- linux-3.11.1/mm/memory.c	2017-10-24 17:27:28.534483315 -0400
++++ lite-kernel/mm/memory.c	2017-10-24 17:28:09.398598400 -0400
+@@ -611,6 +611,7 @@
+ 		wait_split_huge_page(vma->anon_vma, pmd);
+ 	return 0;
+ }
++EXPORT_SYMBOL(__pte_alloc);
+ 
+ int __pte_alloc_kernel(pmd_t *pmd, unsigned long address)
+ {
+@@ -3882,6 +3883,7 @@
+ 	spin_unlock(&mm->page_table_lock);
+ 	return 0;
+ }
++EXPORT_SYMBOL(__pud_alloc);
+ #endif /* __PAGETABLE_PUD_FOLDED */
+ 
+ #ifndef __PAGETABLE_PMD_FOLDED
+@@ -3912,6 +3914,7 @@
+ 	spin_unlock(&mm->page_table_lock);
+ 	return 0;
+ }
++EXPORT_SYMBOL(__pmd_alloc);
+ #endif /* __PAGETABLE_PMD_FOLDED */
+ 
+ #if !defined(__HAVE_ARCH_GATE_AREA)
