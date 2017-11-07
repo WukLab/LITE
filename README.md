@@ -72,13 +72,13 @@ You can start cluster manager like this:
 Start LITE clients one by one to establish the connection with cluster manager assuming the IP address of cluster manager is `192.168.1.1`. Client needs to install `lite_internal.ko` and `lite_api.ko` first in order. There is a simple script `lite_insmod.sh`, which help you to install these two modules.
 
 ##### S5.2.1: Run LITE in userspace
-call `userspace_ibapi_join("192.168.1.1", 18500, 1)` if you want to use port 18500 and IB port 1 to build LITE cluster.
+call `userspace_liteapi_join("192.168.1.1", 18500, 1)` if you want to use port 18500 and IB port 1 to build LITE cluster.
 
 ##### S5.2.2: Run LITE in kernel space
-call `ibapi_establish_conn("192.168.1.1", 18500, 1)` if you want to use port 18500 and IB port 1 to build LITE cluster.
+call `liteapi_establish_conn("192.168.1.1", 18500, 1)` if you want to use port 18500 and IB port 1 to build LITE cluster.
 
 ##### S5.3: establish_conn
-Even the program which is called ibapi_establish_conn is terminated, the node is still in LITE cluster.
+Even the program which is called liteapi_establish_conn is terminated, the node is still in LITE cluster.
 Therefore, I suggest to write an extra program (as lite_join.c) to join the cluster instead of doing join inside your testing program.
 How to join a node is illustrated in lite example code.
 
@@ -87,7 +87,7 @@ In detail:
       This will insmod lite_internal module  
 2. **insmod lite_api.ko**  
       This will insmod lite_api module
-3. **userspace_ibapi_join("192.168.1.1", 18500, 1)**  or **ibapi_establish_connection("192.168.1.1", 18500, 1)**
+3. **userspace_liteapi_join("192.168.1.1", 18500, 1)**  or **liteapi_establish_connection("192.168.1.1", 18500, 1)**
       This will connect with cluster manager and connent the client to LITE cluster
 
 ### S6: Run User Programs
