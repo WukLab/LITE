@@ -16,11 +16,11 @@ This version of LITE has been tested for the following configuration:
   * RNICs:
     * ConnectX-3 354A (InfiniBand)
 3. Package (on CentOS7)
-  * We didn't install MLNX_OFED
-  * `libmthca infiniband-diags perftest qperf opensm libibverbs librdmacm librdmacm-devel libmlx4 libibverbs-utils`
+  * required packages: `libmthca infiniband-diags perftest qperf opensm libibverbs librdmacm librdmacm-devel libmlx4 libibverbs-utils`
   * add the following two lines to the end of /etc/security/limits.conf
     * `* soft memlock unlimited`
     * `* hard memlock unlimited`
+4. LITE is not compatible with MLNX_OFED now
 
 We built LITE as a linux module for the Linux 3.11.1 kernel (patch for syscall is provided).
 The LITE kernel module is in `core/`. 
