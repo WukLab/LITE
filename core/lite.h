@@ -107,7 +107,7 @@
 
 #define DEBUG_SHINYEH
 
-#define LITE_ROCE
+//#define LITE_ROCE
 
 #ifdef LITE_ROCE
 	#define SGID_INDEX 0

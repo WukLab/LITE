@@ -508,10 +508,13 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 	ctx->send_state = (enum s_state *)kmalloc(num_connections * sizeof(enum s_state), GFP_KERNEL);	
 	ctx->recv_state = (enum r_state *)kmalloc(num_connections * sizeof(enum r_state), GFP_KERNEL);
 
-	if(ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &ctx->gid))
+	if(SGID_INDEX != -1)
 	{
-		printk(KERN_ALERT "Fail to query gid\n");
-		return NULL;
+		if(ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &ctx->gid))
+		{
+			printk(KERN_ALERT "Fail to query gid\n");
+			return NULL;
+		}
 	}
 
 	//Customized part
@@ -919,7 +922,10 @@ int client_gen_msg(ltc *ctx, char *msg, int connection_id)
 	my_dest.node_id = ctx->node_id;
 	my_dest.qpn = ctx->qp[connection_id]->qp_num;
 	my_dest.psn = client_get_random_number() & 0xffffff;
-        ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &my_dest.gid);
+	if(SGID_INDEX != -1)
+	{
+        	ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &my_dest.gid);
+	}
 	client_gid_to_wire_gid(&my_dest.gid, gid);
 	sprintf(msg, "%04x:%04x:%06x:%06x:%s", my_dest.node_id, my_dest.lid, my_dest.qpn,my_dest.psn, gid);
 	return 0;
