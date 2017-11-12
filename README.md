@@ -102,6 +102,7 @@ It could re-connect to LITE cluster manager to rebuild the whole LITE cluster ag
 
 ## History:
 `LITE v0.1`: first opensource LITE
+
 `LITE v0.2`: beta version of LITE-RoCE  
 
 ## To cite LITE, please use:
