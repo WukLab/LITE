@@ -107,6 +107,13 @@
 
 #define DEBUG_SHINYEH
 
+//#define LITE_ROCE
+
+#ifdef LITE_ROCE
+	#define SGID_INDEX 0
+#else
+	#define SGID_INDEX -1
+#endif
 
 #define MAX_LITE_NUM 4
 #define MESSAGE_SIZE 4096
@@ -128,6 +135,12 @@
 #define NUM_PARALLEL_CONNECTION 4
 #define GET_NODE_ID_FROM_POST_RECEIVE_ID(id) (id>>8)/NUM_PARALLEL_CONNECTION
 #define GET_POST_RECEIVE_DEPTH_FROM_POST_RECEIVE_ID(id) (id&0x000000ff)
+
+#ifdef LITE_ROCE
+	#define LITE_MTU IB_MTU_1024
+#else
+	#define LITE_MTU IB_MTU_4096
+#endif
 
 //#define LITE_GET_TIME
 //#define LITE_GET_TIME_MULTISGE
@@ -224,7 +237,11 @@
 
 //Memory Related
 #define LITE_MEMORY_BLOCK 4194304 //1024*1024*4
-#define LITE_MAX_MEMORY_BLOCK 48 //4MB * 32 = 128MB
+#ifdef LITE_ROCE
+	#define LITE_MAX_MEMORY_BLOCK 16 //4MB * 16 = 64MB
+#else
+	#define LITE_MAX_MEMORY_BLOCK 32 //4MB * 32 = 128MB
+#endif
 
 
 
@@ -247,8 +264,6 @@ void get_cycle_end(void);
 #define SEND_REPLY_SIZE_TOO_BIG -105
 #define SEND_REPLY_FAIL -106
 #define SEND_REPLY_ACK 0
-
-
 
 enum mode {
 	M_WRITE,
@@ -380,12 +395,12 @@ struct ask_mr_table{
 };
 
 struct ask_mr_reply_form{
-	struct lmr_info reply_mr[LITE_MAX_MEMORY_BLOCK];
+	uint64_t op_code;
 	int total_length;
 	int node_id;
 	uint64_t permission;
-	uint64_t op_code;
 	uint64_t list_length;
+	struct lmr_info reply_mr[LITE_MAX_MEMORY_BLOCK];
 };
 
 struct mr_request_form{
@@ -596,6 +611,7 @@ struct client_ah_combined
 	int			node_id;
 	int			qkey;
 	int			dlid;
+	union ib_gid		gid;
 };
 
 //Related to remote imm-write
@@ -804,6 +820,8 @@ struct lite_context {
 	atomic_t low_total_num_read;
 	atomic_t low_total_num_sr;
 	wait_queue_head_t priority_block_queue;
+
+	union ib_gid gid;
 };
 
 typedef struct lite_context ltc;

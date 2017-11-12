@@ -109,7 +109,7 @@ static int server_connect_loopback(struct ibv_qp *input_qp, int port, int my_psn
 		attr.ah_attr.is_global = 1;
 		attr.ah_attr.grh.hop_limit = 1;
 		attr.ah_attr.grh.dgid = dest->gid;
-		attr.ah_attr.grh.sgid_index = -1;//Always set to -1
+		attr.ah_attr.grh.sgid_index = SGID_INDEX;//Always set to -1
 	}
 	if (ibv_modify_qp(input_qp, &attr,
 			  IBV_QP_STATE              |
@@ -271,6 +271,15 @@ static struct lite_context *server_init_ctx(struct ibv_device *ib_dev,int size,i
 	}
 	ctx->ah = malloc(sizeof(struct ibv_ah *)*ctx->num_node);
 	ctx->ah_attrUD = malloc(sizeof(struct client_ah_combined)*ctx->num_node);
+	if(SGID_INDEX!=-1)
+	{
+		if(ibv_query_gid(ctx->context, port, SGID_INDEX, &ctx->gid))
+		{
+			fprintf(stderr, "Failed to query GID\n");
+			return -1;
+		}
+	}
+
 	return ctx;
 
 clean_qp:
@@ -483,7 +492,7 @@ int server_setup_loopback_connections(struct ibv_device *ib_dev,int size,int rx_
 			//.qp_access_flags = 0
 			//.qp_access_flags = IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ,
 			.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_ATOMIC | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE,
-                        .path_mtu = IBV_MTU_4096,
+                        .path_mtu = LITE_MTU,
                         .retry_cnt = 7,
                         .rnr_retry = 7
 		};
@@ -526,7 +535,7 @@ int server_setup_loopback_connections(struct ibv_device *ib_dev,int size,int rx_
 			//.qp_access_flags = 0
 			//.qp_access_flags = IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ,
 			.qp_access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_ATOMIC | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE,
-                        .path_mtu = IBV_MTU_4096,
+                        .path_mtu = LITE_MTU,
                         .retry_cnt = 7,
                         .rnr_retry = 7
 		};
@@ -545,13 +554,19 @@ int server_setup_loopback_connections(struct ibv_device *ib_dev,int size,int rx_
         loopback_in.qpn = ctx->loopback_in->qp_num;
         loopback_in.psn = lrand48() & 0xffffff;
         loopback_in.node_id = 0;
-        gid_to_wire_gid(&loopback_in.gid, gid);
+        //gid_to_wire_gid(&loopback_in.gid, gid);
+        memcpy(&loopback_in.gid, &ctx->gid, sizeof(union ibv_gid));
+	inet_ntop(AF_INET6, &loopback_in.gid, gid, sizeof gid);
+	printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n", loopback_in.lid, loopback_in.qpn, loopback_in.psn, gid);
         memset(&loopback_out, 0, sizeof(struct lite_dest));
         loopback_out.lid = ctx->portinfo.lid;
         loopback_out.qpn = ctx->loopback_out->qp_num;
         loopback_out.psn = lrand48() & 0xffffff;
         loopback_out.node_id = 0;
-        gid_to_wire_gid(&loopback_out.gid, gid);
+        //gid_to_wire_gid(&loopback_out.gid, gid);
+        memcpy(&loopback_out.gid, &ctx->gid, sizeof(union ibv_gid));
+	inet_ntop(AF_INET6, &loopback_out.gid, gid, sizeof gid);
+	printf("  local address:  LID 0x%04x, QPN 0x%06x, PSN 0x%06x, GID %s\n", loopback_out.lid, loopback_out.qpn, loopback_out.psn, gid);
     
         if (server_connect_loopback(ctx->loopback_in, port, loopback_in.psn, mtu, sl, &loopback_out)) 
         {
@@ -577,7 +592,7 @@ int server_init_interface(int ib_port)
 	int                    rx_depth = RECV_DEPTH;
 	int		       i;
         
-        mtu = IBV_MTU_4096;
+        mtu = LITE_MTU;
 	sl = 0;
 	routs = (int *)malloc(MAX_CONNECTION * sizeof(int));
 
@@ -830,6 +845,13 @@ int server_keep_server_alive(void *ptr)
                 ah_attr.sl                = 0;
                 ah_attr.src_path_bits = 0;
                 ah_attr.port_num = 1;
+		if(SGID_INDEX!=-1)
+		{
+			memcpy(&ah_attr.grh.dgid, &ctx->ah_attrUD[cur_node].gid, sizeof(union ibv_gid));
+			ah_attr.is_global = 1;
+			ah_attr.grh.sgid_index = SGID_INDEX;
+			ah_attr.grh.hop_limit = 1;
+		}
                 ctx->ah[cur_node] = ibv_create_ah(ctx->pd, &ah_attr);
                 printf("%s: UD message from %d with qpn %d and lid %d: %p\n", __func__, cur_node, ctx->ah_attrUD[cur_node].qpn, ctx->ah_attrUD[cur_node].dlid, ctx->ah[cur_node]);
 
@@ -1482,6 +1504,7 @@ int liteapi_init(int ib_port, int ethernet_port, int option){
         ctx->ah_attrUD[0].node_id = 0;
         ctx->ah_attrUD[0].qkey = 0x336;
         ctx->ah_attrUD[0].dlid = ctx->portinfo.lid;
+	memcpy(&ctx->ah_attrUD[0].gid, &ctx->gid, sizeof(union ibv_gid));
         
         pthread_t                           thread_server;
         pthread_create(&thread_server, NULL, (void *)&server_keep_server_alive, &init_port);
