@@ -1,7 +1,7 @@
 LITE Local Indirection TiEr
 ====
 
-LITE - Kernel RDMA Support for Datacenter Applications v1.0
+LITE - Kernel RDMA Support for Datacenter Applications v0.2
 
 LITE stands for Local Indirection TiEr for RDMA in the Linux kernel.
 LITE virtualizes native RDMA into a flexible, high-level, easy-to-use abstraction and allows applications to safely share resources.
@@ -99,6 +99,10 @@ There are several code samples under `lite_userspace/`. Basically, we join LITE 
 Currenly, LITE doesn't provide complete instructions for leaving LITE cluster.  
 If a node leaves, all nodes have to leave LITE and rebuild the whole cluster. By running `rmmod` `lite_api.ko` and `lite_internal.ko` in order can terminate the LITE module (or running `lite_rmmod.sh`). 
 It could re-connect to LITE cluster manager to rebuild the whole LITE cluster again by following Step 5 (also ctrl+c to re-run for cluster manager).
+
+## History:
+`LITE v0.1`: first opensource LITE
+`LITE v0.2`: beta version of LITE-RoCE  
 
 ## To cite LITE, please use:
 
