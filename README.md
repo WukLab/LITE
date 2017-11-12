@@ -10,7 +10,7 @@ Despite the widely-held belief that kernel bypassing is essential to RDMA’s lo
 This version of LITE has been tested for the following configuration:
 
 1. Software
-  * OS: CentOS 7.1 (kernel 3.11.1 - also supports kernel 3.10.108, but uses kernel 3.11.1 if possible)
+  * OS: CentOS 7.1 (kernel `3.11.1` - also supports kernel `3.10.108`, but uses kernel `3.11.1` if possible)
   * RDMA drivers: `mlx4` from official libibverbs and verbs.
 2. Hardware
   * RNICs:
@@ -22,7 +22,7 @@ This version of LITE has been tested for the following configuration:
     * `* hard memlock unlimited`
 4. LITE is not compatible with MLNX_OFED now
 
-We built LITE as a linux module for the Linux 3.11.1 (also 3.10.108) kernel (patch for syscall is provided).
+We built LITE as a linux module for the Linux `3.11.1` (also `3.10.108`) kernel (patch for syscall is provided).
 The LITE kernel module is in `core/`. 
 The folder `lite-userspace` contains simple examples of using LITE in user space.
 The code `core\lite_test.c` contains simple examples of using LITE in kernel space.
@@ -41,7 +41,7 @@ For more information please check [LITE Paper](https://dl.acm.org/citation.cfm?i
 LITE's cluster manager source code is located in `cluster-manager/`, which runs on user space. Assume this machine has installed all IB user libraries, you can go to this directory and simply do `make`. After that, you will have a `mgmt-server`, which is LITE's clueter manager. Also, get the IP address of this CD server, which will be used by all other LITE clients to establish connection.
 
 ### S2: Install and boot LITE kernel on LITE clients (required root privilege for steps 4, 5, and 6)
-1. First, get linux tarball (we used 3.11.1 from `wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.11.1.tar.gz` and 3.10.108 from `wget https://cdn.kernel.org/pub/linux/kernel/v3.x/linux-3.10.108.tar.xz`)
+1. First, get linux tarball (we used `3.11.1` from `wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.11.1.tar.gz` and `3.10.108` from `wget https://cdn.kernel.org/pub/linux/kernel/v3.x/linux-3.10.108.tar.xz`)
 2. extract the tarball and cd into the kernel source code (e.g., `cd linux-[version]`)
 3. apply lite-patch (mainly for syscall) `patch -p1 < ../lite_kernel_patch-[version]`
 4. Compile the kernel with your machine's old config:                                                        
