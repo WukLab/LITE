@@ -44,7 +44,7 @@ struct atomic_struct{
 #include "fifo.h"
 
 
-#define LITE_ROCE
+//#define LITE_ROCE
 #ifdef LITE_ROCE
 	#define SGID_INDEX 0
 #else

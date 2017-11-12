@@ -271,10 +271,13 @@ static struct lite_context *server_init_ctx(struct ibv_device *ib_dev,int size,i
 	}
 	ctx->ah = malloc(sizeof(struct ibv_ah *)*ctx->num_node);
 	ctx->ah_attrUD = malloc(sizeof(struct client_ah_combined)*ctx->num_node);
-	if(ibv_query_gid(ctx->context, port, SGID_INDEX, &ctx->gid))
+	if(SGID_INDEX!=-1)
 	{
-		fprintf(stderr, "Failed to query GID\n");
-		return -1;
+		if(ibv_query_gid(ctx->context, port, SGID_INDEX, &ctx->gid))
+		{
+			fprintf(stderr, "Failed to query GID\n");
+			return -1;
+		}
 	}
 
 	return ctx;
