@@ -43,6 +43,14 @@ struct atomic_struct{
 
 #include "fifo.h"
 
+
+#define LITE_ROCE
+#ifdef LITE_ROCE
+	#define SGID_INDEX 0
+#else
+	#define SGID_INDEX -1
+#endif
+
 #define MAX_NODE 16
 #define FIRST_ASK_MR_SET 16
 #define LID_SEND_RECV_FORMAT "0000:0000:000000:000000:00000000000000000000000000000000"
@@ -63,6 +71,12 @@ struct atomic_struct{
 #define WRAP_UP_NUM_FOR_CIRCULAR_ID 256
 #define WRAP_UP_NUM_FOR_TYPE 65536 //since there are 64 bits in wr_id, we are going to use 9-12 bits to do thread id waiting passing
 #define CIRCULAR_BUFFER_LENGTH 1024
+
+#ifdef LITE_ROCE
+	#define LITE_MTU IBV_MTU_1024
+#else
+	#define LITE_MTU IBV_MTU_4096
+#endif
 
 pthread_mutex_t atomic_accessing_lock[MAX_NODE];
 sem_t get_thread_waiting_number_semaphore;
@@ -183,6 +197,7 @@ struct client_ah_combined
 	int                     node_id;
        	int                     qkey;
 	int                     dlid;
+	union ibv_gid		gid;
 };
 
 struct lite_context {
@@ -247,6 +262,7 @@ struct lite_context {
     int num_used_lock;
     struct lmr_info shared_locks_mr[MAX_LOCK];
     fifo_t **shared_locks_fifo_queue;
+    union ibv_gid gid;
 };
 struct lite_dest {
     int node_id;
