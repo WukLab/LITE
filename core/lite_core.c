@@ -276,6 +276,14 @@ int client_connect_loopback(struct ib_qp *src_qp, int port, int my_psn, enum ib_
 			.port_num	= port
 		}
 	};
+	if(SGID_INDEX != -1)
+	{
+                attr.ah_attr.ah_flags = 1;
+                attr.ah_attr.grh.hop_limit = 1;
+                //attr.ah_attr.grh.dgid = dest->gid;
+		memcpy(&attr.ah_attr.grh.dgid, &dest->gid, sizeof(union ib_gid));
+                attr.ah_attr.grh.sgid_index = SGID_INDEX;
+	}
         
 	printk(KERN_CRIT "%s: lid-%d qpn-%d psn-%d\n", __func__, dest->lid, dest->qpn, dest->psn);
 	if(ib_modify_qp(src_qp, &attr, 
@@ -361,7 +369,7 @@ int client_setup_loopback_connections(ltc *ctx, int size, int rx_depth, int port
                 attr1.pkey_index = 0;
                 attr1.port_num = port;
                 attr1.qp_access_flags = IB_ACCESS_REMOTE_WRITE|IB_ACCESS_REMOTE_READ|IB_ACCESS_LOCAL_WRITE|IB_ACCESS_REMOTE_ATOMIC;
-                attr1.path_mtu = IB_MTU_4096;
+                attr1.path_mtu = LITE_MTU;
                 attr1.retry_cnt = 7;
                 attr1.rnr_retry = 7;
 
@@ -406,7 +414,7 @@ int client_setup_loopback_connections(ltc *ctx, int size, int rx_depth, int port
                 attr1.pkey_index = 0;
                 attr1.port_num = port;
                 attr1.qp_access_flags = IB_ACCESS_REMOTE_WRITE|IB_ACCESS_REMOTE_READ|IB_ACCESS_LOCAL_WRITE|IB_ACCESS_REMOTE_ATOMIC;
-                attr1.path_mtu = IB_MTU_4096;
+                attr1.path_mtu = LITE_MTU;
                 attr1.retry_cnt = 7;
                 attr1.rnr_retry = 7;
 
@@ -426,12 +434,14 @@ int client_setup_loopback_connections(ltc *ctx, int size, int rx_depth, int port
 	loopback_in.qpn = ctx->loopback_in->qp_num;
 	loopback_in.psn = client_get_random_number() & 0xffffff;
 	loopback_in.node_id = 0;
+	memcpy(&loopback_in.gid, &ctx->gid, sizeof(union ib_gid));
 	//gid_to_wire_gid(&loopback_in.gid, gid);
 	memset(&loopback_out, 0, sizeof(struct lite_dest));
 	loopback_out.lid = ctx->portinfo.lid;
 	loopback_out.qpn = ctx->loopback_out->qp_num;
 	loopback_out.psn = client_get_random_number() & 0xffffff;
 	loopback_out.node_id = 0;
+	memcpy(&loopback_out.gid, &ctx->gid, sizeof(union ib_gid));
 	printk(KERN_CRIT "%s: lid-%d qpn-%d psn-%d\n", __func__, loopback_in.lid, loopback_in.qpn, loopback_in.psn);
 	printk(KERN_CRIT "%s: lid-%d qpn-%d psn-%d\n", __func__, loopback_out.lid, loopback_out.qpn, loopback_out.psn);
 	//gid_to_wire_gid(&loopback_out.gid, gid);
@@ -480,6 +490,8 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 	ctx->num_node = MAX_NODE;
 	ctx->num_parallel_connection = NUM_PARALLEL_CONNECTION;
 	ctx->context = (struct ib_context *)ib_dev;
+
+	
 	if(!ctx->context)
 	{
 		printk(KERN_ALERT "Fail to initialize device / ctx->context\n");
@@ -495,6 +507,12 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 	ctx->proc = ib_get_dma_mr(ctx->pd, IB_ACCESS_LOCAL_WRITE | IB_ACCESS_REMOTE_WRITE | IB_ACCESS_REMOTE_READ | IB_ACCESS_REMOTE_ATOMIC);
 	ctx->send_state = (enum s_state *)kmalloc(num_connections * sizeof(enum s_state), GFP_KERNEL);	
 	ctx->recv_state = (enum r_state *)kmalloc(num_connections * sizeof(enum r_state), GFP_KERNEL);
+
+	if(ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &ctx->gid))
+	{
+		printk(KERN_ALERT "Fail to query gid\n");
+		return NULL;
+	}
 
 	//Customized part
 	ctx->num_alive_connection = (atomic_t *)kmalloc(ctx->num_node*sizeof(atomic_t), GFP_KERNEL);
@@ -516,19 +534,15 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 	for(i=0;i<ctx->num_node;i++)
 		ctx->atomic_request_num[i]=0;*/
 
-
-
 	ctx->atomic_request_num_high = (atomic_t *)kmalloc(ctx->num_node*sizeof(atomic_t), GFP_KERNEL);
 	memset(ctx->atomic_request_num_high, 0, ctx->num_node*sizeof(atomic_t));
 	for(i=0;i<ctx->num_node;i++)
 		atomic_set(&ctx->atomic_request_num_high[i], -1);
 
-
 	atomic_set(&ctx->parallel_thread_num,0);
 
 	atomic_set(&ctx->alive_connection, 0);
 	atomic_set(&ctx->num_completed_threads, 0);
-
 
 	ctx->atomic_buffer = (struct atomic_struct **)kmalloc(num_connections * sizeof(struct atomic_struct *), GFP_KERNEL);
 	ctx->atomic_buffer_total_length = (int *)kmalloc(num_connections * sizeof(int), GFP_KERNEL);
@@ -537,8 +551,6 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 	ctx->atomic_buffer_cur_length = (int *)kmalloc(num_connections * sizeof(int), GFP_KERNEL);
 	for(i=0;i<num_connections;i++)
 		ctx->atomic_buffer_cur_length[i]=-1;
-
-
 
 	ctx->cq = (struct ib_cq **)kmalloc(NUM_POLLING_THREADS * sizeof(struct ib_cq *), GFP_KERNEL);
 	for(i=0;i<NUM_POLLING_THREADS;i++)
@@ -577,7 +589,6 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 		atomic_set(&ctx->connection_count[i], 0);
 	}
 
-
 	//atomic multicast send related things
 
 	ctx->first_packet_header = kmalloc(sizeof(struct liteapi_header) * MAX_MULTICAST_HOP, GFP_KERNEL);
@@ -612,7 +623,6 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
 
 	//lmr setup
 	atomic_set(&ctx->lmr_inc, 1024);
-
 
 	//UD connection setup
 	
@@ -749,7 +759,7 @@ ltc *client_init_ctx(int size, int rx_depth, int port, struct ib_device *ib_dev)
                 attr1.pkey_index = 0;
                 attr1.port_num = port;
                 attr1.qp_access_flags = IB_ACCESS_REMOTE_WRITE|IB_ACCESS_REMOTE_READ|IB_ACCESS_LOCAL_WRITE|IB_ACCESS_REMOTE_ATOMIC;
-                attr1.path_mtu = IB_MTU_4096;
+                attr1.path_mtu = LITE_MTU;
                 attr1.retry_cnt = 7;
                 attr1.rnr_retry = 7;
                 
@@ -835,7 +845,7 @@ ltc *client_init_interface(int ib_port, struct ib_device *ib_dev)
 	int 	x;
 	int	ret;
 	ltc *ctx;
-	mtu = IB_MTU_4096;
+	mtu = LITE_MTU;
 	sl = 0;
 
 	//srand48(time(NULL));
@@ -864,7 +874,6 @@ ltc *client_init_interface(int ib_port, struct ib_device *ib_dev)
 }
 EXPORT_SYMBOL(client_init_interface);
 
-
 int client_get_random_number(void)
 {
 	int random_number;
@@ -873,9 +882,32 @@ int client_get_random_number(void)
 }
 EXPORT_SYMBOL(client_get_random_number);
 
+void client_gid_to_wire_gid(const union ib_gid *gid, char wgid[])
+{
+        int i;
+
+        for (i = 0; i < 4; ++i)
+        {
+                sprintf(&wgid[i * 8], "%08x", htonl(*(uint32_t *)(gid->raw + i * 4)));
+        }
+}
+
+void client_wire_gid_to_gid(const char *wgid, union ib_gid *gid)
+{
+        char tmp[9];
+        uint32_t v32;
+        int i;
+
+        for (tmp[8] = 0, i = 0; i < 4; ++i) {
+                memcpy(tmp, wgid + i * 8, 8);
+                sscanf(tmp, "%x", &v32);
+                *(uint32_t *)(&gid->raw[i * 4]) = ntohl(v32);
+        }
+}
+
 int client_gen_msg(ltc *ctx, char *msg, int connection_id)
 {
-	//int gid[33];
+	char gid[33];
 	struct lite_dest my_dest;
 	my_dest.lid = ctx->portinfo.lid;
 	/*if(ctx->portinfo.link_layer!= IB_LINK_LAYER_ETHERNET && !my_dest.lid)
@@ -887,25 +919,10 @@ int client_gen_msg(ltc *ctx, char *msg, int connection_id)
 	my_dest.node_id = ctx->node_id;
 	my_dest.qpn = ctx->qp[connection_id]->qp_num;
 	my_dest.psn = client_get_random_number() & 0xffffff;
-        ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, 0, &my_dest.gid);
-	//inet_ntop(AF_INET6, &my_dest.gid, gid, sizeof(union ib_gid));
-	//client_gid_to_wire_gid(&my_dest.gid, gid);
-	sprintf(msg, "%04x:%04x:%06x:%06x:%s", my_dest.node_id, my_dest.lid, my_dest.qpn,my_dest.psn, "00000000000000000000000000000000");
+        ib_query_gid((struct ib_device *)ctx->context, ctx->ib_port, SGID_INDEX, &my_dest.gid);
+	client_gid_to_wire_gid(&my_dest.gid, gid);
+	sprintf(msg, "%04x:%04x:%06x:%06x:%s", my_dest.node_id, my_dest.lid, my_dest.qpn,my_dest.psn, gid);
 	return 0;
-}
-
-void client_wire_gid_to_gid(const char *wgid, union ib_gid *gid)
-{
-	char tmp[9];
-	uint32_t v32;
-	int i;
-
-	for (tmp[8] = 0, i = 0; i < 4; ++i) 
-	{
-		memcpy(tmp, wgid + i * 8, 8);
-		sscanf(tmp, "%x", &v32);
-		*(uint32_t *)(&gid->raw[i * 4]) = ntohl(v32);
-	}
 }
 
 int client_msg_to_lite_dest(char *msg, struct lite_dest *rem_dest)
@@ -933,14 +950,12 @@ void client_ib_dereg_mr_addr(ltc *ctx, void *addr, size_t length)
 	//return (uintptr_t)ib_dma_unmap_single((struct ib_device *)ctx->context, addr, length, DMA_BIDIRECTIONAL); 
 }
 
-
 uintptr_t client_ib_reg_mr_phys_addr(ltc *ctx, void *addr, size_t length)
 {
 	struct ib_device *ibd = (struct ib_device*)ctx->context;
 	return (uintptr_t)phys_to_dma(ibd->dma_device, (phys_addr_t)addr);
 }
 EXPORT_SYMBOL(client_ib_reg_mr_phys_addr);
-
 
 /**
  * client_ib_reg_mr: get the physical address of a input kernel virtual address
@@ -1166,7 +1181,7 @@ int client_connect_ctx(ltc *ctx, int connection_id, int port, int my_psn, enum i
 			.port_num	= port
 		}
 	};
-        if(is_roce) {
+        /*if(is_roce) {
                 //attr.ah_attr.grh.dgid.global.interface_id = dest.gid_global_interface_id;
                 //attr.ah_attr.grh.dgid.global.subnet_prefix = dest.gid_global_subnet_prefix;
                 attr.ah_attr.grh.dgid.global.interface_id = 0;
@@ -1175,14 +1190,15 @@ int client_connect_ctx(ltc *ctx, int connection_id, int port, int my_psn, enum i
                 attr.ah_attr.grh.hop_limit = 1;
                 attr.ah_attr.dlid = 0;
                 attr.ah_attr.ah_flags = 1;//attr.ah_attr.is_global = 1;
-        }
-	/*if(dest->gid.global.interface_id)
-	  {
-	//attr.ah_attr.is_global = 1;
-	attr.ah_attr.grh.hop_limit = 1;
-	attr.ah_attr.grh.dgid = dest->gid;
-	attr.ah_attr.grh.sgid_index = -1; //Always set to -1
-	}*/
+        }*/
+	if(SGID_INDEX != -1)
+	{
+		attr.ah_attr.ah_flags = 1;
+                attr.ah_attr.grh.hop_limit = 1;
+                //attr.ah_attr.grh.dgid = dest->gid;
+		memcpy(&attr.ah_attr.grh.dgid, &dest->gid, sizeof(union ib_gid));
+	        attr.ah_attr.grh.sgid_index = SGID_INDEX;
+	}
 
 	if(ib_modify_qp(ctx->qp[connection_id], &attr, 
 				IB_QP_STATE	|
@@ -1637,7 +1653,6 @@ int client_receive_message(ltc *ctx, unsigned int port, void *ret_addr, int rece
                 found = 1;
         }
 
-
         //The above part takes around 20 ns
 	//validate hashtable
 	if(unlikely(!found))
@@ -1691,7 +1706,6 @@ int client_receive_message(ltc *ctx, unsigned int port, void *ret_addr, int rece
 	}
 	//test10 ends
 	//printk(KERN_CRIT "%s: hash-%p offset-%x tmp-%p recv %s testport-%d testnodeid-%d\n", __func__, current_hash_ptr->addr, offset, tmp, ret_addr, tmp->designed_port, tmp->source_node_id);
-
 
 	//has to keep data in descriptor
         //these two memcpy (one for pointer, one for data) use 30ns, 100ns(few)
@@ -1891,6 +1905,7 @@ int client_query_port(ltc *ctx, int target_node, int designed_port, int requery_
 	int priority = LOW_PRIORITY;
 	int wait_send_reply_id;
 	struct ask_mr_reply_form reply_mr_form;
+	
 
 	struct app_reg_port *entry;
 	int bucket;
@@ -1898,7 +1913,6 @@ int client_query_port(ltc *ctx, int target_node, int designed_port, int requery_
 	//check first
 	struct app_reg_port *current_hash_ptr;
 	int found=0;
-
 	if(!requery_flag)//If requery is true, skip local check
 	{
 		port_node_key = (designed_port<<MAX_NODE_BIT) + target_node;
@@ -1954,9 +1968,8 @@ int client_query_port(ltc *ctx, int target_node, int designed_port, int requery_
 		printk(KERN_CRIT "%s: SUCCESS node %d port %d remote addr %p remote rkey %d remote id %d\n", __func__, target_node, designed_port, entry->ring_mr.addr, entry->ring_mr.rkey, entry->ring_mr.node_id);
 		return reply_mr_form.op_code;
 	}
-	printk(KERN_CRIT "FAIL\n");
+	printk(KERN_CRIT "FAIL %x\n", (int)reply_mr_form.op_code);
 	return reply_mr_form.op_code;
-
 }
 EXPORT_SYMBOL(client_query_port);
 
@@ -2934,7 +2947,6 @@ void asy_hash_page_key_cache_free(void *ptr)
 	kmem_cache_free(asy_hash_page_key_cache, ptr);
 }
 
-
 /**
  * client_process_userspace_fast_receive - process and push the data to the respected receiver if the receiver is already back to userspace for fast receive
  * @ctx: lite context
@@ -2992,7 +3004,6 @@ int client_process_userspace_fast_receive(ltc *ctx, void *ret_addr, int receive_
                 {
                         found = 1;
                 }
-
 
                 //The above part takes around 20 ns
                 //validate hashtable
@@ -3085,7 +3096,6 @@ int client_poll_cq_pass(struct thread_pass_struct *input)
 	do_exit(0);
 	return 0;
 }
-
 
 /**
  * client_poll_cq - polling the CQ (for RC QP) to get IMM completion
@@ -3335,7 +3345,6 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 	allow_signal(SIGKILL);
 	//set_current_state(TASK_INTERRUPTIBLE);
 
-
 	while(1)
 	{
 		#ifdef NOTIFY_MODEL_UD
@@ -3396,7 +3405,6 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 			}
 			if((int) wc[i].opcode == IB_WC_RECV)
 			{
-				//test_printk(KERN_ALERT "receive something\n");
 				char *addr;
 				int type;
 				struct liteapi_post_receive_intermediate_struct *p_r_i_struct = (struct liteapi_post_receive_intermediate_struct*)wc[i].wr_id;
@@ -3411,6 +3419,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 				addr = (char *)p_r_i_struct->msg;
 				ctx->recv_numUD++;
 				type = header_addr->type;
+				//printk(KERN_ALERT "receive %d\n", type);
 				switch(type)
 				{
 					case MSG_CLIENT_SEND:
@@ -3552,9 +3561,16 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						ah_attr.sl        = UD_QP_SL;
 						ah_attr.src_path_bits = 0;
 						ah_attr.port_num = 1;
+						if(SGID_INDEX!=-1)
+						{
+							//ah_attr.grh.dgid = ctx->ah_attrUD[node_id].gid;
+							memcpy(&ah_attr.grh.dgid, &ctx->ah_attrUD[node_id].gid, sizeof(union ib_gid));
+							ah_attr.ah_flags = 1;
+							ah_attr.grh.sgid_index = SGID_INDEX;
+							ah_attr.grh.hop_limit = 1;
+						}
 						ctx->ah[node_id] = ib_create_ah(ctx->pd, &ah_attr);
-
-						//printk(KERN_CRIT "%s: create UD dlid %d qpn %d nodeid %d\n", __func__, ctx->ah_attrUD[node_id].dlid, ctx->ah_attrUD[node_id].qpn, ctx->ah_attrUD[node_id].node_id);
+						printk(KERN_CRIT "%s: create UD dlid %d qpn %d nodeid %d ah %p\n", __func__, ctx->ah_attrUD[node_id].dlid, ctx->ah_attrUD[node_id].qpn, ctx->ah_attrUD[node_id].node_id, ctx->ah[node_id]);
 						client_free_recv_buf(addr);
 						header_cache_free(header_addr);
 						break;
@@ -4239,8 +4255,6 @@ int client_send_reply_with_rdma_write_with_imm_sge(ltc *ctx, int number_of_node,
 	return count;
 }
 EXPORT_SYMBOL(client_send_reply_with_rdma_write_with_imm_sge);
-
-
 
 /**
  * client_send_reply_with_rdma_write_with_imm - issue a RDMA request with imm - mainly used for RPC
@@ -5362,7 +5376,6 @@ int client_create_metadata_by_lmr(ltc *ctx, uint64_t ret_key, struct lmr_info **
 }
 EXPORT_SYMBOL(client_create_metadata_by_lmr);
 
-
 /**
  * client_add_askmr_table - add LMR into local table
  * @ctx: lite context
@@ -5621,7 +5634,6 @@ int client_alloc_continuous_memory(ltc *ctx, unsigned long long vaddr, unsigned 
         return 0;
 }
 EXPORT_SYMBOL(client_alloc_continuous_memory);
-
 
 /**
  * client_establish_conn - join LITE cluster
@@ -5893,6 +5905,7 @@ ltc *client_establish_conn(struct ib_device *ib_dev, char *servername, int eth_p
 		client_ktcp_send(excsocket, msg, sizeof(LID_SEND_RECV_FORMAT));
 		udelay(100);
 	}
+	
 	//Connect RC to CD
         memset(&recv_ah, 0, sizeof(struct client_ah_combined));
         memset(&send_ah, 0, sizeof(struct client_ah_combined));
@@ -5901,11 +5914,20 @@ ltc *client_establish_conn(struct ib_device *ib_dev, char *servername, int eth_p
 	ctx->ah_attrUD[0].node_id = recv_ah.node_id;
 	ctx->ah_attrUD[0].qkey = recv_ah.qkey;
 	ctx->ah_attrUD[0].dlid = recv_ah.dlid;
+	memcpy(&ctx->ah_attrUD[0].gid, &recv_ah.gid, sizeof(union ib_gid));
 	memset(&ah_attr, 0, sizeof(struct ib_ah_attr));
 	ah_attr.dlid      = ctx->ah_attrUD[0].dlid;
 	ah_attr.sl        = 0;
 	ah_attr.src_path_bits = 0;
 	ah_attr.port_num = 1;
+	if(SGID_INDEX!=-1)
+	{
+		ah_attr.ah_flags = 1;
+		//ah_attr.grh.dgid = ctx->ah_attrUD[0].gid;
+		memcpy(&ah_attr.grh.dgid, &ctx->ah_attrUD[0].gid, sizeof(union ib_gid));
+		ah_attr.grh.sgid_index = SGID_INDEX;
+		ah_attr.grh.hop_limit = 1;
+	}
 	ctx->ah[0] = ib_create_ah(ctx->pd, &ah_attr);
 	if(!ctx->ah[0])
 	{
@@ -5917,6 +5939,10 @@ ltc *client_establish_conn(struct ib_device *ib_dev, char *servername, int eth_p
 	send_ah.node_id = ctx->node_id;
 	send_ah.qkey 	= 0x336;
 	send_ah.dlid    = ctx->portinfo.lid;
+	if(SGID_INDEX!=-1)
+	{
+		memcpy(&send_ah.gid, &ctx->gid, sizeof(union ib_gid));
+	}
 	client_ktcp_send(excsocket, (char *)&send_ah, sizeof(struct client_ah_combined));
 
 	printk(KERN_ALERT "%s: return before establish connection with NODE_ID: %d\n", __func__, NODE_ID);	
@@ -5977,8 +6003,6 @@ int client_cleanup_module(void)
 		list_add_tail(&(recv->list), &request_list[QUEUE_ACK].list);
 		spin_unlock(&wq_lock[QUEUE_ACK]);
 		/*wake_up_interruptible(&wq);*/
-		
-		
 	}
 	else
 	{
@@ -6055,8 +6079,6 @@ EXPORT_SYMBOL(client_cleanup_module);
 
 static int lite_mmaptest_mmap(struct file *filp, struct vm_area_struct *vma)
 {
-        
-	
 	unsigned long roundup_size = vma->vm_end - vma->vm_start;
 	unsigned long u_addr = vma->vm_start;
 	unsigned long p_addr = (unsigned long)kzalloc(roundup_size, GFP_KERNEL);
@@ -6167,7 +6189,6 @@ static int __init lite_internal_init_module(void)
 		unregister_chrdev_region(lite_dev_num, 1);
 		return -1;
 	}
-
 	printk(KERN_CRIT "%s:%d\n", __func__, lite_dev);
 	printk(KERN_CRIT "insmod lite_internal module\n");
 	return 0;
