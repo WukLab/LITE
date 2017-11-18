@@ -43,7 +43,7 @@ LITE's cluster manager source code is located in `cluster-manager/`, which runs 
 ### S2: Install and boot LITE kernel on LITE clients (required root privilege for steps 4, 5, and 6)
 1. First, get linux tarball (we used `3.11.1` from `wget https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.11.1.tar.gz` and `3.10.108` from `wget https://cdn.kernel.org/pub/linux/kernel/v3.x/linux-3.10.108.tar.xz`)
 2. extract the tarball and cd into the kernel source code (e.g., `cd linux-[version]`)
-3. apply lite-patch (mainly for syscall) `patch -p1 < ../lite_kernel_patch-[version]`
+3. apply lite-patch (mainly for syscall) `patch -p1 < ../lite_kernel_patch_[version]`
 4. Compile the kernel with your machine's old config:                                                        
 `cp /boot/config-your-default-kernel-version lite-kernel/.config`  
 `make oldconfig` (Recommended to have a special _CONFIG_LOCALVERSION="LITE"_)  

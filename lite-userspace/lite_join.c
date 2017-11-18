@@ -16,8 +16,8 @@
 
 int main(int argc, char *argv[])
 {
-        printf("we are now running write experiments\n");
-        userspace_liteapi_join("192.168.0.1", 18500, 1);
+        printf("Ready to join a LITE cluster\n");
+        userspace_liteapi_join("192.168.1.1", 18500, 1);
         printf("after join cluster as %d\n", userspace_liteapi_get_node_id());
 	return 0;
 }

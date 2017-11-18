@@ -52,9 +52,9 @@ int init_log(int remote_node)
 int internal_value=0;
 int main(int argc, char *argv[])
 {
-        if(atoi(argv[1])==1)
+        if(argc==2)
         {
-        	init_log(1);
+        	init_log(atoi(argv[1]));
         }
 	return ;
 }
