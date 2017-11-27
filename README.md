@@ -105,6 +105,8 @@ It could re-connect to LITE cluster manager to rebuild the whole LITE cluster ag
 
 `LITE v0.2`: beta version of LITE-RoCE  
 
+ Please check core/README to see current limitations
+
 ## To cite LITE, please use:
 
 >\@inproceedings{SOSP17-LITE\,  
