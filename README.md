@@ -30,6 +30,8 @@ The code `core\lite_test.c` contains simple examples of using LITE in kernel spa
 # Caution:
 This is a BETA version. We will have our stable version ready soon.
 For more information please check [LITE Paper](https://dl.acm.org/citation.cfm?id=3132762) appeared in *SOSP'17*.
+LITE could also run in python by importing ctypes. There is an example code from [pyLITE](https://github.com/wilso467/pyLITE). 
+This has not been verified by the LITE team. Use it with your own caution
 
 ## How To Run LITE
 
