@@ -2276,7 +2276,7 @@ static int __init ibv_init_module(void)
 	}
 
 	atomic_set(&global_reqid, 0);
-	//liteapi_establish_conn("wuklab13", 1, 10);
+	//liteapi_establish_conn("IP_HERE", 1, 10);
 	
 	//register syscall
 	

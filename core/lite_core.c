@@ -28,7 +28,6 @@ struct task_struct *asyIO_handler;
 
 struct kmem_cache *post_receive_cache;
 struct kmem_cache *s_r_cache;
-struct kmem_cache *header_cache;
 struct kmem_cache *header_cache_UD;
 struct kmem_cache *intermediate_cache;
 struct kmem_cache *lmr_info_cache;
@@ -996,16 +995,11 @@ struct lmr_info *client_ib_reg_mr(ltc *ctx, void *addr, size_t length, enum ib_a
 }
 EXPORT_SYMBOL(client_ib_reg_mr);
 
-void header_cache_free(void *ptr)
+//void header_cache_UD_free(void *ptr)
+void header_cache_UD_free(uintptr_t ptr)
 {
 	//printk(KERN_CRIT "free %x\n", ptr);
-	kmem_cache_free(header_cache, ptr);
-}
-
-void header_cache_UD_free(void *ptr)
-{
-	//printk(KERN_CRIT "free %x\n", ptr);
-	kmem_cache_free(header_cache_UD, ptr);
+	kmem_cache_free(header_cache_UD, (void *)ptr);
 }
 
 /**
@@ -3442,7 +3436,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						list_add_tail(&(recv->list), &request_list[QUEUE_LOW].list);
 						spin_unlock(&wq_lock[QUEUE_LOW]);
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_GET_SEND_AND_REPLY_1:
@@ -3462,7 +3456,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						list_add_tail(&(recv->list), &request_list[QUEUE_LOW].list);
 						spin_unlock(&wq_lock[QUEUE_LOW]);
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}	
 					case MSG_RESERVE_LOCK:
@@ -3486,7 +3480,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						list_add_tail(&(recv->list), &request_list[QUEUE_HIGH].list);
 						spin_unlock(&wq_lock[QUEUE_HIGH]);
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_MR_REQUEST:
@@ -3506,7 +3500,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						list_add_tail(&(recv->list), &request_list[QUEUE_MEDIUM].list);
 						spin_unlock(&wq_lock[QUEUE_MEDIUM]);
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_GET_REMOTE_ATOMIC_OPERATION:
@@ -3531,7 +3525,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						list_add_tail(&(recv->list), &request_list[QUEUE_LOW].list);
 						spin_unlock(&wq_lock[QUEUE_LOW]);
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_NODE_JOIN:
@@ -3551,7 +3545,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 							wake_up_process(thread_create_new_node);
 						}
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_NODE_JOIN_UD:
@@ -3578,7 +3572,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						ctx->ah[node_id] = ib_create_ah(ctx->pd, &ah_attr);
 						printk(KERN_CRIT "%s: create UD dlid %d qpn %d nodeid %d ah %p\n", __func__, ctx->ah_attrUD[node_id].dlid, ctx->ah_attrUD[node_id].qpn, ctx->ah_attrUD[node_id].node_id, ctx->ah[node_id]);
 						client_free_recv_buf(addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_GET_SEND_AND_REPLY_2:
@@ -3595,7 +3589,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						memcpy((void *)header_addr->store_addr, addr, header_addr->length);
 						memcpy((void *)header_addr->store_semaphore, &header_addr->length, sizeof(uint32_t));
 						client_free_recv_buf(addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_CREATE_LOCK_REPLY:
@@ -3614,7 +3608,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 							memcpy((void *)header_addr->store_semaphore, &ret, sizeof(int));
 						}
 						client_free_recv_buf(addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					case MSG_GET_SEND_AND_REPLY_OPT_2:
@@ -3624,7 +3618,7 @@ int client_poll_cq_UD(ltc *ctx, struct ib_cq *target_cq)
 						*(void **)header_addr->store_addr = addr;
 						*(int *)header_addr->store_semaphore = header_addr->length;
 						//kmem_cache_free(header_cache, header_addr);
-						header_cache_free(header_addr);
+						header_cache_UD_free(p_r_i_struct->header);
 						break;
 					}
 					default:
@@ -5689,7 +5683,6 @@ ltc *client_establish_conn(struct ib_device *ib_dev, char *servername, int eth_p
 	//Build cache for memory --> slab
 	post_receive_cache = kmem_cache_create("post_receive_buffer", POST_RECEIVE_CACHE_SIZE, 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD), NULL);
 	s_r_cache = kmem_cache_create("send_reply_cache", sizeof(struct send_and_reply_format), 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD), NULL);
-	header_cache = kmem_cache_create("header_cache", sizeof(struct liteapi_header), 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD | SLAB_HWCACHE_ALIGN), NULL);
 	header_cache_UD = kmem_cache_create("header_cacheUD", sizeof(struct liteapi_header)+40, 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD | SLAB_HWCACHE_ALIGN), NULL);
 	intermediate_cache = kmem_cache_create("intermediate_cache", sizeof(struct liteapi_post_receive_intermediate_struct), 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD), NULL);
 	lmr_info_cache = kmem_cache_create("lmr_info_cache", sizeof(struct lmr_info), 0, (SLAB_RECLAIM_ACCOUNT | SLAB_MEM_SPREAD), NULL);
@@ -6048,8 +6041,6 @@ int client_cleanup_module(void)
 	}*/
 	if(post_receive_cache)
 		kmem_cache_destroy(post_receive_cache);
-	if(header_cache)
-		kmem_cache_destroy(header_cache);
 	if(header_cache_UD)
 		kmem_cache_destroy(header_cache_UD);
 	if(s_r_cache)
