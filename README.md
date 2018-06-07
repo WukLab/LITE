@@ -5,13 +5,13 @@ LITE - Kernel RDMA Support for Datacenter Applications v0.2
 
 LITE stands for Local Indirection TiEr for RDMA in the Linux kernel.
 LITE virtualizes native RDMA into a flexible, high-level, easy-to-use abstraction and allows applications to safely share resources.
-Despite the widely-held belief that kernel bypassing is essential to RDMA’s low-latency performance, LITE shows that using a kernel-level indirection can achieve both flexibility and lowlatency, scalable performance at the same time.
+Despite the widely-held belief that kernel bypassing is essential to RDMAâs low-latency performance, LITE shows that using a kernel-level indirection can achieve both flexibility and lowlatency, scalable performance at the same time.
 
 This version of LITE has been tested for the following configuration:
 
 1. Software
   * OS: CentOS 7.1 (kernel `3.11.1` - also supports kernel `3.10.108`, but uses kernel `3.11.1` if possible)
-    * A port of LITE for kernel `4.9` can be found [here](https://github.com/lastweek/LITE).
+    * A port of LITE by Yizhou Shan for kernel `4.9` can be found [here](https://github.com/lastweek/LITE) (Check Section Caution for more details).
   * RDMA drivers: `mlx4` from official libibverbs and verbs.
 2. Hardware
   * RNICs:
@@ -31,8 +31,11 @@ The code `core\lite_test.c` contains simple examples of using LITE in kernel spa
 # Caution:
 This is a BETA version. We will have our stable version ready soon.
 For more information please check [LITE Paper](https://dl.acm.org/citation.cfm?id=3132762) appeared in *SOSP'17*.
+
 LITE could also run in python by importing ctypes. There is an example code from [pyLITE](https://github.com/wilso467/pyLITE). 
-This has not been verified by the LITE team. Use it with your own caution
+This has not been verified by the LITE team. Use it with your own caution.
+
+LITE is also ported into kernel `4.9` by Yizhou Shan at [LITE-4.9](https://github.com/lastweek/LITE). This port is tested with Ubuntu kernel `4.9.103` and `mlx5`. There are several known differences between kernel `3.x` and kernel `4.x`, and also `mlx4` and `mlx5` driver. Some features and performance numbers could be different.  Use it with your own caution.
 
 ## How To Run LITE
 
@@ -121,3 +124,4 @@ It could re-connect to LITE cluster manager to rebuild the whole LITE cluster ag
 > month = {October}  
 >}
  
+
