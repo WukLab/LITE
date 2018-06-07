@@ -11,6 +11,7 @@ This version of LITE has been tested for the following configuration:
 
 1. Software
   * OS: CentOS 7.1 (kernel `3.11.1` - also supports kernel `3.10.108`, but uses kernel `3.11.1` if possible)
+    * A port of LITE for kernel `4.9` can be found [here](https://github.com/lastweek/LITE).
   * RDMA drivers: `mlx4` from official libibverbs and verbs.
 2. Hardware
   * RNICs:
