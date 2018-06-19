@@ -1627,7 +1627,6 @@ int client_receive_message(ltc *ctx, unsigned int port, void *ret_addr, int rece
 	node_id = new_request->source_node_id;
         //printk(KERN_CRIT "%s: offset %d node_id %d\n", __func__, offset, node_id);
 	//free list
-	kmem_cache_free(imm_header_from_cq_to_port_cache, new_request);
 
 	//get buffer from hash table based on node and port
 	port_node_key = (port<<MAX_NODE_BIT) + node_id;
