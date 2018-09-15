@@ -8,3 +8,4 @@ For userspace example, please check `lite-userspace/` for more details.
 4. send-reply doesn't support local channel now
 5. ibapi_send_reply_imm_multisge (multicast send-reply api) is only available for kernel space application. And this is a wrap-up for our send-reply function. It doesn't optimized significantly. And most of the features of send-reply don't support this api including multiple MR under one LMR, local_send-reply, and send-only request
 6. one LMR can only support upto 128MB. It's defined in lite.h
+7. a port is reserved by one thread only. Different threads should have a synchronization way when calling receive function.

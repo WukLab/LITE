@@ -773,8 +773,8 @@ struct lite_context {
 	
 	//void **imm_cache_perport;
 	struct imm_header_from_cq_to_port **imm_waitqueue_perport;
-        unsigned int imm_waitqueue_perport_count_poll[IMM_MAX_PORT];
-        unsigned int imm_waitqueue_perport_count_recv[IMM_MAX_PORT];
+        unsigned long long imm_waitqueue_perport_count_poll[IMM_MAX_PORT];
+        unsigned long long imm_waitqueue_perport_count_recv[IMM_MAX_PORT];
 	wait_queue_head_t imm_receive_block_queue[IMM_MAX_PORT];
 	int imm_perport_reg_num[IMM_MAX_PORT];//-1 no registeration, 0 up --> how many
 	spinlock_t imm_perport_lock[IMM_MAX_PORT];
