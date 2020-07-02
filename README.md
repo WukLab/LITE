@@ -1,7 +1,9 @@
-LITE Local Indirection TiEr
-====
+# LITE Local Indirection TiEr (SOSP'17)
 
-LITE - Kernel RDMA Support for Datacenter Applications v0.2
+[[SOSP 2017 Paper]](https://dl.acm.org/doi/10.1145/3132747.3132762)
+[[Slide]](https://www.sigops.org/s/conferences/sosp/2017/slides/lite-sosp17-slides.pdf)
+
+__LITE - Kernel RDMA Support for Datacenter Applications v0.2__
 
 LITE stands for Local Indirection TiEr for RDMA in the Linux kernel.
 LITE virtualizes native RDMA into a flexible, high-level, easy-to-use abstraction and allows applications to safely share resources.
@@ -113,7 +115,9 @@ It could re-connect to LITE cluster manager to rebuild the whole LITE cluster ag
 
  Please check core/README to see current limitations
 
-## To cite LITE, please use:
+## Cite
+
+To cite LITE, please use:
 
 >\@inproceedings{SOSP17-LITE\,  
 > author = {Shin-Yeh Tsai and Yiying Zhang},  
@@ -123,5 +127,3 @@ It could re-connect to LITE cluster manager to rebuild the whole LITE cluster ag
 > address = {Shanghai, China},  
 > month = {October}  
 >}
- 
-
